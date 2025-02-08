@@ -1,5 +1,8 @@
+# Base-X
 
 > Open this page at [https://robo-technical-group.github.io/pxt-base-x/](https://robo-technical-group.github.io/pxt-base-x/)
+
+This is a port of [Hunter WB's Base-X library](https://github.com/hunterwb/base-x) to MakeCode Arcade.
 
 ## Use as Extension
 
