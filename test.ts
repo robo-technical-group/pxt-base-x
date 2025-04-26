@@ -25,36 +25,50 @@ try {
 } catch { }
 
 try {
-    let _ = new BaseX.U8(64).decode([64,])
+    let _ = new BaseX.U8(0x101)
     game.splash("Big constructor test 1 failed.")
+} catch { }
+
+try {
+    let _ = new BaseX.U16(0x10001)
+    game.splash("Big constructor test 2 failed.")
+} catch { }
+
+try {
+    let _ = new BaseX.U8(64).decode([64,])
+    game.splash("Decode range test 1 failed.")
     numberFailed++
 } catch { }
 
 try {
     let _ = new BaseX.U8(200).decode([0xff,])
-    game.splash("Big constructor test 2 failed.")
+    game.splash("Decode range test 2 failed.")
     numberFailed++
 } catch { }
 
 try {
     let _ = new BaseX.U16(64).decode([64,])
-    game.splash("Big constructor test 3 failed.")
+    game.splash("Decode range test 3 failed.")
     numberFailed++
 } catch { }
 
 try {
     let _ = new BaseX.U16(30000).decode([0xffff,])
-    game.splash("Big constructor test 4 failed.")
+    game.splash("Decode range test 4 failed.")
     numberFailed++
 } catch { }
 
 function invert(coder: BaseX.U8, bytes: number[]): boolean {
     let result: number[] = coder.decode(coder.encode(bytes))
     if (result.length != bytes.length) {
+        game.splash("Length error.",
+            `Result ${result.length} != Input ${bytes.length}.`)
         return false
     }
     for (let i: number = 0; i < result.length; i++) {
         if (result[i] != bytes[i]) {
+            game.splash(`Match error @ ${i}.`,
+                `Result ${result[i]} != Input ${bytes[i]}.`)
             return false
         }
     }
@@ -72,8 +86,17 @@ function mCreateArray(length: number, value: number): number[] {
 for (let u8: number = 2; u8 <= 256; u8++) {
     let coder: BaseX.U8 = new BaseX.U8(u8)
     for (let i: number = 0; i <= 65; i++) {
-        if (!invert(coder, mCreateArray(i, 0))) {
-            console.log(`Zero filled test ${u8} pass ${i} failed.`)
+        let b: number[] = mCreateArray(i, 0)
+        if (!invert(coder, b)) {
+            game.splash(`Zero filled test ${u8} pass ${i} failed.`)
+            numberFailed++
+        }
+        for (let j: number = 0; j < i; j++) {
+            b[j] = randint(0, 0xf)
+        }
+        console.log(b)
+        if (!invert(coder, b)) {
+            game.splash(`Random filled test ${u8} pass ${i} failed.`)
             numberFailed++
         }
     }
