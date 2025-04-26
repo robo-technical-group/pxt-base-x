@@ -1,7 +1,5 @@
 // tests go here; this will not be compiled when this package is used as an extension.
 let numberFailed: number = 0
-
-/*
 try {
     let _ = new BaseX.U8(0)
     game.splash("Zero constructor test 1 failed.")
@@ -49,9 +47,8 @@ try {
     game.splash("Big constructor test 4 failed.")
     numberFailed++
 } catch { }
-*/
 
-function invert(coder: BaseX.RadixCoder, bytes: number[]): boolean {
+function invert(coder: BaseX.U8, bytes: number[]): boolean {
     let result: number[] = coder.decode(coder.encode(bytes))
     if (result.length != bytes.length) {
         return false
@@ -76,12 +73,14 @@ for (let u8: number = 2; u8 <= 256; u8++) {
     let coder: BaseX.U8 = new BaseX.U8(u8)
     for (let i: number = 0; i <= 65; i++) {
         if (!invert(coder, mCreateArray(i, 0))) {
-            game.splash(`Zero filled test ${u8} pass ${i} failed.`)
+            console.log(`Zero filled test ${u8} pass ${i} failed.`)
             numberFailed++
         }
     }
 }
-
+console.log("Done!")
 if (numberFailed == 0) {
     game.splash("All tests passed!")
+} else {
+    game.splash(`${numberFailed} tests failed.`)
 }

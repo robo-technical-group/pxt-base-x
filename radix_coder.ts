@@ -25,39 +25,67 @@
  */
 
 namespace BaseX {
-    export abstract class RadixCoder {
-        public static readonly BASE_MIN: number = 2
-        public static readonly BASE_MAX_U8: number = 0x100
-        public static readonly BASE_MAX_U16: number = 0x10000
-        public static readonly LOG_BYTE: number = Math.log(0x100)
+    const BASE_MIN: number = 2
+    const BASE_MAX_U8: number = 0x100
+    const BASE_MAX_U16: number = 0x10000
+    const LOG_BYTE: number = Math.log(0x100)
+
+    function createArray<T>(length: number, value: T): T[] {
+        let result: T[] = []
+        for (let i: number = 0; i < length; i++) {
+            result.push(value)
+        }
+        return result
+    }
+
+    function leadingZeros(a: number[]): number {
+        let zc: number = 0
+        while (zc < a.length && a[zc] == 0) {
+            zc++
+        }
+        return zc
+    }
+
+    function drop(a: number[], start: number): number[] {
+        return start == 0 ?
+            a :
+            a.slice(start)
+    }
+
+    function ceilMultiply(n: number, f: number) {
+        return Math.ceil(n * f)
+    }
+
+    export class U8 {
         protected readonly b: number // base
         protected readonly encodeFactor: number
         protected readonly decodeFactor: number
 
         constructor(base: number) {
-            if (base < RadixCoder.BASE_MIN) {
-                throw `Base must be >= ${RadixCoder.BASE_MIN}`
+            if (base < BASE_MIN) {
+                throw `Base must be >= ${BASE_MIN}`
             }
             this.b = base
             let logBase: number = Math.log(base)
-            this.encodeFactor = RadixCoder.LOG_BYTE / logBase
-            this.decodeFactor = logBase / RadixCoder.LOG_BYTE
+            this.encodeFactor = LOG_BYTE / logBase
+            this.decodeFactor = logBase / LOG_BYTE
+            this.checkBaseMax(BASE_MAX_U8)
         }
 
         public get base(): number {
             return this.b
         }
 
-        public abstract get mask(): number
+        public get mask(): number { return 0xff }
 
         public decode(n: number[]): number[] {
-            let zeroCount: number = RadixCoder.leadingZeros(n)
+            let zeroCount: number = leadingZeros(n)
             if (zeroCount == n.length) {
-                return RadixCoder.createArray(n.length, 0)
+                return createArray(n.length, 0)
             }
             let capacity: number = zeroCount +
-                RadixCoder.ceilMultiply(n.length - zeroCount, this.decodeFactor)
-            let dst: number[] = RadixCoder.createArray(capacity, 0)
+                ceilMultiply(n.length - zeroCount, this.decodeFactor)
+            let dst: number[] = createArray(capacity, 0)
             let j: number = capacity - 2
             for (let i: number = zeroCount; i < n.length; i++) {
                 let carry: number = n[i] & this.mask
@@ -72,17 +100,17 @@ namespace BaseX {
                     carry >>>= 8
                 }
             }
-            return RadixCoder.drop(dst, j - zeroCount + 1)
+            return drop(dst, j - zeroCount + 1)
         }
 
         public encode(bytes: number[]): number[] {
-            let zeroCount: number = RadixCoder.leadingZeros(bytes)
+            let zeroCount: number = leadingZeros(bytes)
             if (zeroCount == bytes.length) {
-                return RadixCoder.createArray(bytes.length, 0)
+                return createArray(bytes.length, 0)
             }
             let capacity: number = zeroCount +
-                RadixCoder.ceilMultiply(bytes.length - zeroCount, this.encodeFactor)
-            let dst: number[] = RadixCoder.createArray(capacity, 0)
+                ceilMultiply(bytes.length - zeroCount, this.encodeFactor)
+            let dst: number[] = createArray(capacity, 0)
             let j: number = capacity - 2
             for (let i: number = zeroCount; i < bytes.length; i++) {
                 let carry: number = bytes[i] & 0xff
@@ -96,7 +124,7 @@ namespace BaseX {
                     carry /= this.b
                 }
             }
-            return RadixCoder.drop(dst, j - zeroCount + 1)
+            return drop(dst, j - zeroCount + 1)
         }
 
         protected checkBaseMax(max: number): void {
@@ -110,43 +138,92 @@ namespace BaseX {
                 throw `Digit must be < ${this.b}`
             }
         }
-
-        protected static createArray<T>(length: number, value: T): T[] {
-            let result: T[] = []
-            for (let i: number = 0; i < length; i++) {
-                result.push(value)
-            }
-            return result
-        }
-
-        protected static leadingZeros(a: number[]): number {
-            let zc: number = 0
-            while (zc < a.length && a[zc] == 0) {
-                zc++
-            }
-            return zc
-        }
-
-        protected static drop(a: number[], start: number): number[] {
-            return start == 0 ?
-                a :
-                a.slice(start)
-        }
-
-        protected static ceilMultiply(n: number, f: number) {
-            return Math.ceil(n * f)
-        }
     }
 
-    export class U8 extends RadixCoder {
+    export class U16 {
+        protected readonly b: number // base
+        protected readonly encodeFactor: number
+        protected readonly decodeFactor: number
+
         constructor(base: number) {
-            super(base)
-            this.checkBaseMax(RadixCoder.BASE_MAX_U8)
+            if (base < BASE_MIN) {
+                throw `Base must be >= ${BASE_MIN}`
+            }
+            this.b = base
+            let logBase: number = Math.log(base)
+            this.encodeFactor = LOG_BYTE / logBase
+            this.decodeFactor = logBase / LOG_BYTE
+            this.checkBaseMax(BASE_MAX_U16)
         }
 
-        public get mask(): number { return 0xff }
-    }
+        public get base(): number {
+            return this.b
+        }
 
+        public get mask(): number { return 0xffff }
+
+        public decode(n: number[]): number[] {
+            let zeroCount: number = leadingZeros(n)
+            if (zeroCount == n.length) {
+                return createArray(n.length, 0)
+            }
+            let capacity: number = zeroCount +
+                ceilMultiply(n.length - zeroCount, this.decodeFactor)
+            let dst: number[] = createArray(capacity, 0)
+            let j: number = capacity - 2
+            for (let i: number = zeroCount; i < n.length; i++) {
+                let carry: number = n[i] & this.mask
+                this.checkDigitBase(carry)
+                for (let k: number = capacity - 1; k > j; k--) {
+                    carry += (dst[k] & 0xff) * this.b
+                    dst[k] = carry & 0xff
+                    carry >>>= 8
+                }
+                while (carry > 0) {
+                    dst[j--] = carry & 0xff
+                    carry >>>= 8
+                }
+            }
+            return drop(dst, j - zeroCount + 1)
+        }
+
+        public encode(bytes: number[]): number[] {
+            let zeroCount: number = leadingZeros(bytes)
+            if (zeroCount == bytes.length) {
+                return createArray(bytes.length, 0)
+            }
+            let capacity: number = zeroCount +
+                ceilMultiply(bytes.length - zeroCount, this.encodeFactor)
+            let dst: number[] = createArray(capacity, 0)
+            let j: number = capacity - 2
+            for (let i: number = zeroCount; i < bytes.length; i++) {
+                let carry: number = bytes[i] & 0xff
+                for (let k: number = capacity - 1; k > j; k--) {
+                    carry += (dst[k] & this.mask) << 8
+                    dst[k] = (carry % this.b) & this.mask
+                    carry /= this.b
+                }
+                while (carry > 0) {
+                    dst[j--] = (carry % this.b) & this.mask
+                    carry /= this.b
+                }
+            }
+            return drop(dst, j - zeroCount + 1)
+        }
+
+        protected checkBaseMax(max: number): void {
+            if (this.b > max) {
+                throw `Base must be <= ${max}`
+            }
+        }
+
+        protected checkDigitBase(digit: number): void {
+            if (digit >= this.b) {
+                throw `Digit must be < ${this.b}`
+            }
+        }
+    }
+    /*
     export class U16 extends RadixCoder {
         constructor(base: number) {
             super(base)
@@ -155,4 +232,5 @@ namespace BaseX {
 
         public get mask(): number { return 0xffff }
     }
+    */
 }
