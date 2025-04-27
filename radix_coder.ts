@@ -30,8 +30,8 @@ namespace BaseX {
     const BASE_MAX_U16: number = 0x10000
     const LOG_BYTE: number = Math.log(0x100)
 
-    function createArray<T>(length: number, value: T): T[] {
-        let result: T[] = []
+    function createArray(length: number, value: number): number[] {
+        let result: number[] = []
         for (let i: number = 0; i < length; i++) {
             result.push(value)
         }
@@ -46,10 +46,22 @@ namespace BaseX {
         return zc
     }
 
+    function leadingZerosBuffer(a: Buffer): number {
+        let zc: number = 0
+        while (zc < a.length && a[zc] == 0) {
+            zc++
+        }
+        return zc
+    }
+
     function drop(a: number[], start: number): number[] {
         return start == 0 ?
             a :
             a.slice(start)
+    }
+
+    function dropBuffer(a: Buffer, start: number): Buffer {
+        return start == 0 ? a : a.slice(start)
     }
 
     function ceilMultiply(n: number, f: number) {
@@ -78,33 +90,33 @@ namespace BaseX {
 
         public get mask(): number { return 0xff }
 
-        public decode(n: number[]): number[] {
+        public decode(n: number[]): Buffer {
             let zeroCount: number = leadingZeros(n)
             if (zeroCount == n.length) {
-                return createArray(n.length, 0)
+                return Buffer.create(n.length)
             }
             let capacity: number = zeroCount +
                 ceilMultiply(n.length - zeroCount, this.decodeFactor)
-            let dst: number[] = createArray(capacity, 0)
+            let dst: Buffer = Buffer.create(capacity)
             let j: number = capacity - 2
             for (let i: number = zeroCount; i < n.length; i++) {
                 let carry: number = n[i] & this.mask
                 this.checkDigitBase(carry)
                 for (let k: number = capacity - 1; k > j; k--) {
                     carry += (dst[k] & 0xff) * this.b
-                    dst[k] = carry & 0xff
+                    dst[k] = carry // Buffer will automatically truncate.
                     carry >>>= 8
                 }
                 while (carry > 0) {
-                    dst[j--] = carry & 0xff
+                    dst[j--] = carry
                     carry >>>= 8
                 }
             }
-            return drop(dst, j - zeroCount + 1)
+            return dropBuffer(dst, j - zeroCount + 1)
         }
 
-        public encode(bytes: number[]): number[] {
-            let zeroCount: number = leadingZeros(bytes)
+        public encode(bytes: Buffer): number[] {
+            let zeroCount: number = leadingZerosBuffer(bytes)
             if (zeroCount == bytes.length) {
                 return createArray(bytes.length, 0)
             }
@@ -117,11 +129,11 @@ namespace BaseX {
                 for (let k: number = capacity - 1; k > j; k--) {
                     carry += (dst[k] & this.mask) << 8
                     dst[k] = (carry % this.b) & this.mask
-                    carry /= this.b
+                    carry = Math.idiv(carry, this.b)
                 }
                 while (carry > 0) {
                     dst[j--] = (carry % this.b) & this.mask
-                    carry /= this.b
+                    carry = Math.idiv(carry, this.b)
                 }
             }
             return drop(dst, j - zeroCount + 1)
@@ -162,33 +174,33 @@ namespace BaseX {
 
         public get mask(): number { return 0xffff }
 
-        public decode(n: number[]): number[] {
+        public decode(n: number[]): Buffer {
             let zeroCount: number = leadingZeros(n)
             if (zeroCount == n.length) {
-                return createArray(n.length, 0)
+                return Buffer.create(n.length)
             }
             let capacity: number = zeroCount +
                 ceilMultiply(n.length - zeroCount, this.decodeFactor)
-            let dst: number[] = createArray(capacity, 0)
+            let dst: Buffer = Buffer.create(capacity)
             let j: number = capacity - 2
             for (let i: number = zeroCount; i < n.length; i++) {
                 let carry: number = n[i] & this.mask
                 this.checkDigitBase(carry)
                 for (let k: number = capacity - 1; k > j; k--) {
                     carry += (dst[k] & 0xff) * this.b
-                    dst[k] = carry & 0xff
+                    dst[k] = carry // Buffer will automatically truncate.
                     carry >>>= 8
                 }
                 while (carry > 0) {
-                    dst[j--] = carry & 0xff
+                    dst[j--] = carry
                     carry >>>= 8
                 }
             }
-            return drop(dst, j - zeroCount + 1)
+            return dropBuffer(dst, j - zeroCount + 1)
         }
 
-        public encode(bytes: number[]): number[] {
-            let zeroCount: number = leadingZeros(bytes)
+        public encode(bytes: Buffer): number[] {
+            let zeroCount: number = leadingZerosBuffer(bytes)
             if (zeroCount == bytes.length) {
                 return createArray(bytes.length, 0)
             }
@@ -201,11 +213,11 @@ namespace BaseX {
                 for (let k: number = capacity - 1; k > j; k--) {
                     carry += (dst[k] & this.mask) << 8
                     dst[k] = (carry % this.b) & this.mask
-                    carry /= this.b
+                    carry = Math.idiv(carry, this.b)
                 }
                 while (carry > 0) {
                     dst[j--] = (carry % this.b) & this.mask
-                    carry /= this.b
+                    carry = Math.idiv(carry, this.b)
                 }
             }
             return drop(dst, j - zeroCount + 1)
@@ -223,14 +235,4 @@ namespace BaseX {
             }
         }
     }
-    /*
-    export class U16 extends RadixCoder {
-        constructor(base: number) {
-            super(base)
-            this.checkBaseMax(RadixCoder.BASE_MAX_U16)
-        }
-
-        public get mask(): number { return 0xffff }
-    }
-    */
 }

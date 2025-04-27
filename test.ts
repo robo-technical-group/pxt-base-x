@@ -1,5 +1,12 @@
-// tests go here; this will not be compiled when this package is used as an extension.
+/*
+let _buf: Buffer = Buffer.create(4)
+_buf[0] = 0xffff
+game.splash(_buf[0])
+game.splash(_buf[1])
+*/
+
 let numberFailed: number = 0
+
 try {
     let _ = new BaseX.U8(0)
     game.splash("Zero constructor test 1 failed.")
@@ -39,7 +46,6 @@ try {
     game.splash("Decode range test 1 failed.")
     numberFailed++
 } catch { }
-
 try {
     let _ = new BaseX.U8(200).decode([0xff,])
     game.splash("Decode range test 2 failed.")
@@ -58,9 +64,40 @@ try {
     numberFailed++
 } catch { }
 
-function invert(coder: BaseX.U8 | BaseX.U16, bytes: number[]): boolean {
-    let result: number[] = coder.decode(coder.encode(bytes))
+function invert(coder: BaseX.U8, bytes: Buffer): boolean {
+    let encoded: number[] = coder.encode(bytes)
+    let result: Buffer = coder.decode(encoded)
     if (result.length != bytes.length) {
+        console.log("Bytes:")
+        console.log(bytes.toArray(NumberFormat.UInt8LE))
+        console.log("Encoded:")
+        console.log(encoded)
+        console.log("Decoded:")
+        console.log(result.toArray(NumberFormat.UInt8LE))
+        game.splash("Length error.",
+            `Result ${result.length} != Input ${bytes.length}.`)
+        return false
+    }
+    for (let i: number = 0; i < result.length; i++) {
+        if (result[i] != bytes[i]) {
+            game.splash(`Match error @ ${i}.`,
+                `Result ${result[i]} != Input ${bytes[i]}.`)
+            return false
+        }
+    }
+    return true
+}
+
+function invert2(coder: BaseX.U16, bytes: Buffer): boolean {
+    let encoded: number[] = coder.encode(bytes)
+    let result: Buffer = coder.decode(encoded)
+    if (result.length != bytes.length) {
+        console.log("Bytes:")
+        console.log(bytes.toArray(NumberFormat.UInt8LE))
+        console.log("Encoded:")
+        console.log(encoded)
+        console.log("Decoded:")
+        console.log(result.toArray(NumberFormat.UInt8LE))
         game.splash("Length error.",
             `Result ${result.length} != Input ${bytes.length}.`)
         return false
@@ -83,28 +120,11 @@ function mCreateArray(length: number, value: number): number[] {
     return toReturn
 }
 
-for (let u16: number = 2; u16 <= 0x10000; u16 += 1 + randint(0, 200)) {
-    let coder: BaseX.U16 = new BaseX.U16(u16)
-    for (let i: number = 0; i <= 65; i++) {
-        let b: number[] = mCreateArray(i, 0)
-        if (!invert(coder, b)) {
-            game.splash(`Zero-filled test ${u16} pass ${i} failed.`)
-            numberFailed++
-        }
-        for (let j: number = 0; j < i; j++) {
-            b[j] = randint(0, 0xf)
-        }
-        if (!invert(coder, b)) {
-            game.splash(`Random-filled test ${u16} pass ${i} failed.`)
-            numberFailed++
-        }
-    }
-}
 
 for (let u8: number = 2; u8 <= 256; u8++) {
     let coder: BaseX.U8 = new BaseX.U8(u8)
     for (let i: number = 0; i <= 65; i++) {
-        let b: number[] = mCreateArray(i, 0)
+        let b: Buffer = Buffer.create(i)
         if (!invert(coder, b)) {
             game.splash(`Zero filled test ${u8} pass ${i} failed.`)
             numberFailed++
@@ -118,6 +138,25 @@ for (let u8: number = 2; u8 <= 256; u8++) {
         }
     }
 }
+
+for (let u16: number = 2; u16 <= 0x10000; u16 += 1 + randint(0, 200)) {
+    let coder: BaseX.U16 = new BaseX.U16(u16)
+    for (let i: number = 0; i <= 65; i++) {
+        let b: Buffer = Buffer.create(i)
+        if (!invert2(coder, b)) {
+            game.splash(`Zero-filled test ${u16} pass ${i} failed.`)
+            numberFailed++
+        }
+        for (let j: number = 0; j < i; j++) {
+            b[j] = randint(0, 0xf)
+        }
+        if (!invert2(coder, b)) {
+            game.splash(`Random-filled test ${u16} pass ${i} failed.`)
+            numberFailed++
+        }
+    }
+}
+
 console.log("Done!")
 if (numberFailed == 0) {
     game.splash("All tests passed!")
