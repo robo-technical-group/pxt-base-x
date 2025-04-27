@@ -157,6 +157,103 @@ for (let u16: number = 2; u16 <= 0x10000; u16 += 1 + randint(0, 200)) {
     }
 }
 
+try {
+    let _ = BaseX.AsciiRadixCoder.fromAlphabet("")
+    game.splash("Empty constructor test failed.")
+    numberFailed++
+} catch { }
+
+try {
+    let _ = BaseX.AsciiRadixCoder.fromAlphabet("A")
+    game.splash("One char constructor test failed.")
+    numberFailed++
+} catch { }
+
+try {
+    let _ = BaseX.AsciiRadixCoder.fromAlphabet("01234567890")
+    game.splash("Repeated character constructor test failed.")
+    numberFailed++
+} catch { }
+
+try {
+    let _ = BaseX.AsciiRadixCoder.fromAlphabet("01").decode("011100X01101")
+    game.splash("Invalid character decode test failed.")
+    numberFailed++
+} catch { }
+
+function invert3(coder: BaseX.AsciiRadixCoder, bytes: Buffer): boolean {
+    let encoded: string = coder.encode(bytes)
+    let result: Buffer = coder.decode(coder.encode(bytes))
+    if (result.length != bytes.length) {
+        game.splash("Length error",
+            `Result ${result.length} != Input ${bytes.length}`)
+        return false
+    }
+    for (let i: number = 0; i < result.length; i++) {
+        if (result[i] != bytes[i]) {
+            game.splash(`Location mismatch @ ${i}.`,
+                `Result ${result[i]} != Input ${bytes[i]}`)
+            return false
+        }
+    }
+    return true
+}
+
+const ASCII36_ALPHA: string = "012345789abcdefghijklmnopqrstuvwxyz"
+
+function arcWithBase(base: number): BaseX.AsciiRadixCoder {
+    let cs: Buffer = Buffer.create(base)
+    for (let i: number = 0; i < base; i++) {
+        cs[i] = i
+    }
+    return BaseX.AsciiRadixCoder.fromAlphabet(cs.toString())
+}
+
+let ascii36Coders: BaseX.AsciiRadixCoder[] = []
+for (let i = 2; i < ASCII36_ALPHA.length; i++) {
+    ascii36Coders.push(
+        BaseX.AsciiRadixCoder.fromAlphabet(ASCII36_ALPHA.substr(0, i))
+    )
+}
+
+let allAsciiCoders: BaseX.AsciiRadixCoder[] = []
+for (let i: number = 2; i <= 128; i++) {
+    allAsciiCoders.push(arcWithBase(i))
+}
+
+ascii36Coders.forEach((value: BaseX.AsciiRadixCoder, index: number) => {
+    for (let i: number = 0; i <= 65; i++) {
+        console.log(`Pass ${i}`)
+        if (!invert3(value, Buffer.create(i))) {
+            game.splash(`Zero-filled test ${index} pass ${i} failed.`)
+            numberFailed++
+        }
+    }
+})
+
+allAsciiCoders.forEach((value: BaseX.AsciiRadixCoder, index: number) => {
+    for (let i: number = 0; i <= 65; i++) {
+        console.log(`Pass ${i}`)
+        if (!invert3(value, Buffer.create(i))) {
+            game.splash(`Zero-filled test ${index} pass ${i} failed.`)
+            numberFailed++
+        }
+    }
+})
+
+ascii36Coders.forEach((value: BaseX.AsciiRadixCoder, index: number) => {
+    for (let i: number = 0; i <= 65; i++) {
+        let b: Buffer = Buffer.create(randint(2, 500))
+        for (let k: number = 0; k < b.length; k++) {
+            b[k] = randint(0, 255)
+        }
+        if (!invert3(value, b)) {
+            game.splash(`Random-filled test ${index} pass ${i} failed.`)
+            numberFailed++
+        }
+    }
+})
+
 console.log("Done!")
 if (numberFailed == 0) {
     game.splash("All tests passed!")

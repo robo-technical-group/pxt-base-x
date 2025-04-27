@@ -9,7 +9,8 @@
         "README.md",
         "main.blocks",
         "main.ts",
-        "radix_coder.ts"
+        "radix_coder.ts",
+        "asciiradixcoder.ts"
     ],
     "testFiles": [
         "test.ts"
